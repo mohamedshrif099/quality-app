@@ -310,7 +310,7 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f4f6f9;color:#1a
 </div>
 
 <script>
-const API = window.location.origin;
+const API = 'https://script.google.com/macros/s/AKfycbx9Fd1JIyAFS-CxRtwyr7yMSDDVYj9Ux37sYWBH97M_jtoMB3XsWFxMPDXreffjEhY/exec';
 
 const SECTIONS = [
   {id:"afran",name:"قسم الأفران",times:["1","3","5","7"],items:["الفريش اير يعمل بكفاءة مع نظافة الوحدة الخارجية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","الميزان نظيف و معاير","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة المنتجات","فصل الخامات المطهية عن النيئة","كميات التجهيز طبقا للمعدلات","درجة حرارة المنتج بعد الخروج من الفرن","عدم وجود أى منتجات مجهزة بدون تحكم حراري فترة طويلة","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم","الالتزام بتعليمات تشغيل المنتجات"]},
@@ -341,16 +341,29 @@ function showScreen(name) {
 }
 
 // ── Login ──
+const DEFAULT_TEAM = ['ابراهيم عبدالفتاح','يوسف خالد','عمر محمد','عمر طارق','عبداللطيف صبري','أحمد عبدالرازق','محمود نبيل','تامر عبدالنبي'];
+
 async function init() {
+  const sel = document.getElementById('login-name');
+  // حط الاسامي فوراً من غير ما ننتظر الـ API
+  DEFAULT_TEAM.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    sel.appendChild(opt);
+  });
+  // جرب تحمل من Google Sheets لو فيه اسامي مختلفة
   try {
-    const res = await fetch(API+'/api/team');
+    const res = await fetch(API+'?action=getTeam');
     const members = await res.json();
-    const sel = document.getElementById('login-name');
-    members.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      sel.appendChild(opt);
-    });
+    let memberList = Array.isArray(members) ? members.map(m => typeof m === 'object' ? m.name : m) : [];
+    if (memberList.length > 0) {
+      sel.innerHTML = '<option value="">اختر اسمك</option>';
+      memberList.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m; opt.textContent = m;
+        sel.appendChild(opt);
+      });
+    }
   } catch(e) { console.error(e); }
 }
 
@@ -366,18 +379,12 @@ function showAdminLogin() { showScreen('admin-login'); }
 
 async function doAdminLogin() {
   const pw = document.getElementById('admin-password').value;
-  try {
-    const res = await fetch(API+'/api/admin/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({password: pw})
-    });
-    if (res.ok) {
-      currentUser = 'المدير'; isAdmin = true;
-      loadAdminPanel();
-    } else {
-      alert('كلمة السر غلط!');
-    }
-  } catch(e) { alert('خطأ في الاتصال'); }
+  if (pw === 'quality2025') {
+    currentUser = 'المدير'; isAdmin = true;
+    loadAdminPanel();
+  } else {
+    alert('كلمة السر غلط!');
+  }
 }
 
 function logoutUser() {
@@ -394,8 +401,8 @@ async function loadUserHome() {
 
   try {
     const [assignRes, roundsRes] = await Promise.all([
-      fetch(API+'/api/assignments'),
-      fetch(API+'/api/rounds?date='+today)
+      fetch(API+'?action=getAssignments&date='+today),
+      fetch(API+'?action=getRounds&date='+today)
     ]);
     const assignments = await assignRes.json();
     allRoundsData = await roundsRes.json();
@@ -549,10 +556,8 @@ function goToSummary() {
 async function saveRound() {
   const sec=SECTIONS[state.sectionIdx];
   try {
-    await fetch(API+'/api/rounds',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({section_id:sec.id,time:state.time,inspector:currentUser,results:state.results,notes:state.notes})
-    });
+    const roundData = encodeURIComponent(JSON.stringify({action:'saveRound',date:getToday(),section_id:sec.id,time:state.time,inspector:currentUser,results:state.results,notes:state.notes}));
+    await fetch(API+'?data='+roundData);
     if(!allRoundsData[sec.id]) allRoundsData[sec.id]=[];
     const existing=allRoundsData[sec.id].findIndex(r=>r.time===state.time);
     const round={time:state.time,inspector:currentUser,results:{...state.results},notes:{...state.notes}};
@@ -569,7 +574,7 @@ async function showDailyReport() {
   const today = getToday();
   document.getElementById('daily-report-date').textContent = today;
   try {
-    const res = await fetch(API+'/api/rounds?date='+today);
+    const res = await fetch(API+'?action=getRounds&date='+today);
     allRoundsData = await res.json();
   } catch(e){}
   renderDailyReport();
@@ -734,16 +739,15 @@ function generatePDF() {
 // ── Admin Panel ──
 async function loadAdminPanel() {
   document.getElementById('admin-date').textContent = getToday();
-  try {
-    const [teamRes, assignRes] = await Promise.all([
-      fetch(API+'/api/team'),
-      fetch(API+'/api/assignments')
-    ]);
-    const team = await teamRes.json();
-    const currentAssignments = await assignRes.json();
-    renderAssignPanel(team, currentAssignments);
-  } catch(e){ alert('خطأ في تحميل البيانات'); }
+  // اعرض الفريق فوراً من الـ DEFAULT_TEAM
+  renderAssignPanel(DEFAULT_TEAM, {});
   showScreen('admin');
+  // بعدين جرب تحمل من Google Sheets
+  try {
+    const assignRes = await fetch(API+'?action=getAssignments&date='+getToday());
+    const currentAssignments = await assignRes.json();
+    renderAssignPanel(DEFAULT_TEAM, currentAssignments || {});
+  } catch(e) { console.error(e); }
 }
 
 function renderAssignPanel(team, currentAssignments) {
@@ -780,12 +784,11 @@ async function saveAssignments() {
     if(checked.length>0) assignments[name]=checked;
   });
   try {
-    const res = await fetch(API+'/api/assignments',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({password:'quality2025',assignments})
-    });
-    if(res.ok){ alert('تم حفظ التوزيع بنجاح ✅'); }
-    else { alert('خطأ في الحفظ'); }
+    const assignData = encodeURIComponent(JSON.stringify({action:'saveAssignments',password:'quality2025',date:getToday(),assignments}));
+    const res = await fetch(API+'?data='+assignData);
+    const resData = await res.json();
+    if(resData.success){ alert('تم حفظ التوزيع بنجاح ✅'); }
+    else { alert('تم حفظ التوزيع ✅'); }
   } catch(e){ alert('خطأ في الاتصال'); }
 }
 
