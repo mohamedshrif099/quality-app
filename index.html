@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>نظام فحص الجودة</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f4f6f9;color:#1a1a2e;direction:rtl;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;}
+.content{padding:14px;max-width:480px;margin:0 auto;}
+
+/* Header */
+.header{background:#1a1a2e;color:white;padding:14px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;}
+.header-title{font-size:15px;font-weight:600;}
+.header-sub{font-size:11px;opacity:.7;margin-top:2px;}
+.back-btn{background:rgba(255,255,255,.15);border:none;color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-family:inherit;}
+.admin-btn{background:#e8c84a;border:none;color:#1a1a2e;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;}
+
+/* Login */
+.login-wrap{padding:40px 24px;text-align:center;}
+.login-icon{font-size:52px;margin-bottom:16px;}
+.login-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+.login-sub{font-size:13px;color:#888;margin-bottom:28px;}
+.login-card{background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.08);text-align:right;}
+.form-label{font-size:13px;color:#555;margin-bottom:6px;display:block;}
+.form-input{width:100%;border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 14px;font-size:14px;font-family:inherit;color:#1a1a2e;background:white;outline:none;margin-bottom:12px;}
+.form-input:focus{border-color:#1a1a2e;}
+.primary-btn{display:block;width:100%;padding:13px;background:#1a1a2e;border:none;border-radius:10px;color:white;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;text-align:center;}
+.primary-btn:active{background:#0f0f1a;}
+.secondary-btn{display:block;width:100%;padding:11px;background:white;border:1.5px solid #e0e0e0;border-radius:10px;color:#555;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;text-align:center;margin-top:8px;}
+.danger-btn{display:block;width:100%;padding:11px;background:#fee2e2;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;text-align:center;margin-top:8px;}
+
+/* Cards */
+.card{background:white;border-radius:12px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+.section-card{cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:transform .15s;}
+.section-card:active{transform:scale(.98);}
+.section-name{font-size:14px;font-weight:600;}
+.section-meta{font-size:11px;color:#888;margin-top:3px;}
+.section-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+.time-badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;}
+.time-badge-done{background:#dcfce7;color:#166534;}
+.time-badge-pending{background:#f3f4f6;color:#9ca3af;}
+.arrow{color:#ccc;font-size:16px;flex-shrink:0;}
+.badge-num{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#fee2e2;color:#991b1b;margin-right:4px;}
+
+/* Stats banner */
+.daily-banner{background:linear-gradient(135deg,#1a1a2e,#2d2d5e);color:white;border-radius:12px;padding:16px;margin-bottom:14px;}
+.daily-banner-title{font-size:13px;opacity:.8;margin-bottom:6px;}
+.daily-stats{display:flex;gap:12px;margin-bottom:12px;}
+.daily-stat{text-align:center;}
+.daily-stat-num{font-size:22px;font-weight:700;}
+.daily-stat-lbl{font-size:10px;opacity:.7;}
+.yellow-btn{display:block;width:100%;padding:11px;background:#e8c84a;border:none;border-radius:8px;color:#1a1a2e;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+.yellow-btn:disabled{background:rgba(255,255,255,.2);color:rgba(255,255,255,.5);cursor:not-allowed;}
+
+/* Time */
+.time-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.time-btn{background:white;border:1.5px solid #e0e0e0;border-radius:8px;padding:11px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;color:#555;transition:all .15s;font-family:inherit;}
+.time-btn.selected{background:#1a1a2e;border-color:#1a1a2e;color:white;}
+.time-btn.already-done{background:#f0fdf4;border-color:#86efac;color:#166534;}
+.time-btn.already-done::after{content:' ✓';}
+
+/* Progress */
+.progress-wrap{background:white;padding:10px 16px;border-bottom:1px solid #eee;position:sticky;top:53px;z-index:50;}
+.progress-bar-bg{background:#f0f0f0;border-radius:4px;height:4px;overflow:hidden;}
+.progress-bar-fill{background:#1a1a2e;height:4px;border-radius:4px;transition:width .3s;}
+.progress-txt{font-size:11px;color:#888;margin-top:4px;display:flex;justify-content:space-between;}
+
+/* Items */
+.item-card{background:white;border-radius:10px;padding:13px;margin-bottom:7px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.item-card.done-pass{border-right:4px solid #22c55e;}
+.item-card.done-fail{border-right:4px solid #ef4444;}
+.item-num{font-size:11px;color:#aaa;margin-bottom:4px;}
+.item-text{font-size:13px;line-height:1.6;margin-bottom:10px;}
+.item-btns{display:flex;gap:8px;}
+.chk-btn{flex:1;padding:8px;border-radius:7px;border:1.5px solid #e0e0e0;cursor:pointer;font-size:13px;font-weight:600;text-align:center;background:white;color:#888;transition:all .15s;font-family:inherit;}
+.chk-btn.pass{background:#dcfce7;border-color:#22c55e;color:#166534;}
+.chk-btn.fail{background:#fee2e2;border-color:#ef4444;color:#991b1b;}
+.note-input{width:100%;margin-top:8px;border:1.5px solid #fca5a5;border-radius:7px;padding:8px 12px;font-size:12px;font-family:inherit;background:#fff5f5;outline:none;}
+
+/* Summary */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.stat-card{background:white;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.stat-num{font-size:24px;font-weight:700;}
+.stat-lbl{font-size:11px;color:#888;margin-top:3px;}
+.stat-card.green .stat-num{color:#16a34a;}
+.stat-card.red .stat-num{color:#dc2626;}
+.fail-section{background:white;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.fail-section-title{font-size:13px;font-weight:600;color:#dc2626;margin-bottom:10px;}
+.fail-item{font-size:12px;padding:7px 0;border-bottom:1px solid #f5f5f5;line-height:1.5;}
+.fail-item:last-child{border-bottom:none;}
+.fail-note{font-size:11px;color:#dc2626;margin-top:2px;}
+.no-fail{font-size:13px;color:#16a34a;text-align:center;padding:10px 0;}
+
+/* Sticky footer */
+.sticky-footer{position:sticky;bottom:0;background:white;border-top:1px solid #eee;padding:10px 14px;}
+
+/* Daily report */
+.day-section-card{background:white;border-radius:10px;padding:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.day-section-name{font-size:14px;font-weight:600;margin-bottom:8px;}
+.rounds-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.round-chip{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;}
+.round-chip-pass{background:#dcfce7;color:#166534;}
+.round-chip-fail{background:#fee2e2;color:#991b1b;}
+.round-chip-mixed{background:#fef3c7;color:#92400e;}
+.repeat-fail{font-size:12px;color:#dc2626;padding:4px 0;border-bottom:1px solid #fef2f2;}
+.repeat-fail:last-child{border-bottom:none;}
+.repeat-fail-count{font-size:10px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:10px;margin-left:4px;}
+
+/* Admin */
+.assign-member{background:white;border-radius:10px;padding:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.member-name{font-size:14px;font-weight:600;margin-bottom:10px;color:#1a1a2e;}
+.section-checkboxes{display:flex;flex-direction:column;gap:6px;}
+.sec-check{display:flex;align-items:center;gap:8px;font-size:12px;color:#444;cursor:pointer;}
+.sec-check input{width:16px;height:16px;cursor:pointer;}
+
+/* Success */
+.success-screen{padding:50px 24px;text-align:center;}
+.success-icon{font-size:52px;margin-bottom:14px;}
+.success-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+.success-sub{font-size:13px;color:#888;margin-bottom:28px;line-height:1.6;}
+
+.form-group{margin-bottom:14px;}
+.divider{height:1px;background:#eee;margin:12px 0;}
+.tag-green{background:#dcfce7;color:#166534;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;}
+.tag-red{background:#fee2e2;color:#991b1b;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- ── شاشة الدخول ── -->
+<div id="screen-login" class="screen active">
+  <div style="padding:30px 20px;max-width:480px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:48px;margin-bottom:12px;">🍽️</div>
+      <div style="font-size:20px;font-weight:700;color:#1a1a2e;">نظام فحص الجودة</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">ادخل اسمك للبدء</div>
+    </div>
+    <div class="login-card">
+      <div class="form-group">
+        <label class="form-label">اختر اسمك</label>
+        <select class="form-input" id="login-name">
+          <option value="">-- اختر اسمك --</option>
+        </select>
+      </div>
+      <button class="primary-btn" onclick="doLogin()">دخول ←</button>
+      <div class="divider"></div>
+      <button class="secondary-btn" onclick="showAdminLogin()">🔐 دخول المدير</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── شاشة دخول المدير ── -->
+<div id="screen-admin-login" class="screen">
+  <div class="header">
+    <div class="header-title">دخول المدير</div>
+    <button class="back-btn" onclick="showScreen('login')">→ رجوع</button>
+  </div>
+  <div class="content" style="padding-top:20px;">
+    <div class="login-card">
+      <div class="form-group">
+        <label class="form-label">كلمة السر</label>
+        <input class="form-input" id="admin-password" type="password" placeholder="أدخل كلمة السر..." />
+      </div>
+      <button class="primary-btn" onclick="doAdminLogin()">دخول ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── الرئيسية (المسؤول) ── -->
+<div id="screen-home" class="screen">
+  <div class="header">
+    <div>
+      <div class="header-title">فحص الجودة اليومي</div>
+      <div class="header-sub" id="header-name"></div>
+    </div>
+    <button class="admin-btn" onclick="showDailyReport()">📊 تقرير اليوم</button>
+  </div>
+  <div class="content" style="padding-top:14px;">
+    <div class="daily-banner">
+      <div class="daily-banner-title">ملخص اليوم</div>
+      <div class="daily-stats">
+        <div class="daily-stat"><div class="daily-stat-num" id="today-rounds">0</div><div class="daily-stat-lbl">مرور منجز</div></div>
+        <div class="daily-stat"><div class="daily-stat-num" id="today-sections">0</div><div class="daily-stat-lbl">قسم تم فحصه</div></div>
+        <div class="daily-stat"><div class="daily-stat-num" id="today-fails">0</div><div class="daily-stat-lbl">مخالفة</div></div>
+      </div>
+    </div>
+    <div id="section-list"></div>
+    <div style="margin-top:8px;">
+      <button class="secondary-btn" onclick="logoutUser()">تسجيل خروج</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── اختيار الوقت ── -->
+<div id="screen-time" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('home')">→ رجوع</button>
+    <div>
+      <div class="header-title" id="time-section-name"></div>
+      <div class="header-sub">اختر ساعة الفحص</div>
+    </div>
+  </div>
+  <div class="content" style="padding-top:16px;">
+    <div class="form-group">
+      <label class="form-label">ساعة الفحص</label>
+      <div class="time-grid" id="time-grid"></div>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="primary-btn" onclick="startInspection()">ابدأ الفحص ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── شاشة الفحص ── -->
+<div id="screen-inspect" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('time')">→ رجوع</button>
+    <div>
+      <div class="header-title" id="inspect-title"></div>
+      <div class="header-sub" id="inspect-sub"></div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-txt"><span id="progress-txt">0 / 0 بند</span><span id="progress-pct">0%</span></div>
+  </div>
+  <div class="content" id="items-list" style="padding-bottom:80px;"></div>
+  <div class="sticky-footer">
+    <button class="primary-btn" onclick="goToSummary()">عرض ملخص التقرير ←</button>
+  </div>
+</div>
+
+<!-- ── الملخص ── -->
+<div id="screen-summary" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('inspect')">→ رجوع</button>
+    <div>
+      <div class="header-title">ملخص المرور</div>
+      <div class="header-sub" id="summary-sub"></div>
+    </div>
+  </div>
+  <div class="content" style="padding-top:14px;padding-bottom:100px;">
+    <div class="stat-grid">
+      <div class="stat-card green"><div class="stat-num" id="stat-pass">0</div><div class="stat-lbl">مطابق ✓</div></div>
+      <div class="stat-card red"><div class="stat-num" id="stat-fail">0</div><div class="stat-lbl">غير مطابق ✗</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-lbl">إجمالي البنود</div></div>
+      <div class="stat-card red"><div class="stat-num" id="stat-pct">0%</div><div class="stat-lbl">نسبة عدم المطابقة</div></div>
+    </div>
+    <div class="fail-section">
+      <div class="fail-section-title">بنود عدم المطابقة</div>
+      <div id="fail-items-container"></div>
+    </div>
+  </div>
+  <div class="sticky-footer">
+    <button class="primary-btn" onclick="saveRound()">💾 حفظ المرور</button>
+    <button class="secondary-btn" onclick="showScreen('home')">رجوع للرئيسية</button>
+  </div>
+</div>
+
+<!-- ── تقرير اليوم ── -->
+<div id="screen-daily" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="showScreen('home')">→ رجوع</button>
+    <div>
+      <div class="header-title">تقرير اليوم الكامل</div>
+      <div class="header-sub" id="daily-report-date"></div>
+    </div>
+  </div>
+  <div class="content" style="padding-top:14px;padding-bottom:100px;" id="daily-report-content"></div>
+  <div class="sticky-footer">
+    <button class="primary-btn" onclick="generatePDF()">📄 تحميل PDF وإرساله</button>
+  </div>
+</div>
+
+<!-- ── لوحة المدير ── -->
+<div id="screen-admin" class="screen">
+  <div class="header">
+    <div>
+      <div class="header-title">لوحة المدير</div>
+      <div class="header-sub" id="admin-date"></div>
+    </div>
+    <button class="admin-btn" onclick="showDailyReportAdmin()">📊 التقرير</button>
+  </div>
+  <div class="content" style="padding-top:14px;padding-bottom:100px;">
+    <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);color:white;">
+      <div style="font-size:13px;opacity:.8;margin-bottom:8px;">توزيع الأقسام على الفريق</div>
+      <div style="font-size:11px;opacity:.6;">اختر لكل عضو الأقسام المخصصة له اليوم</div>
+    </div>
+    <div id="assign-list"></div>
+  </div>
+  <div class="sticky-footer">
+    <button class="primary-btn" onclick="saveAssignments()">💾 حفظ التوزيع</button>
+    <button class="secondary-btn" onclick="logoutUser()">تسجيل خروج</button>
+  </div>
+</div>
+
+<!-- ── النجاح ── -->
+<div id="screen-success" class="screen">
+  <div class="header"><div class="header-title">تم!</div></div>
+  <div class="success-screen">
+    <div class="success-icon">✅</div>
+    <div class="success-title" id="success-title">تم الحفظ!</div>
+    <div class="success-sub" id="success-msg"></div>
+    <button class="primary-btn" onclick="showScreen('home')" style="max-width:220px;margin:0 auto;">العودة للرئيسية</button>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+const SECTIONS = [
+  {id:"afran",name:"قسم الأفران",times:["1","3","5","7"],items:["الفريش اير يعمل بكفاءة مع نظافة الوحدة الخارجية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","الميزان نظيف و معاير","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة المنتجات","فصل الخامات المطهية عن النيئة","كميات التجهيز طبقا للمعدلات","درجة حرارة المنتج بعد الخروج من الفرن","عدم وجود أى منتجات مجهزة بدون تحكم حراري فترة طويلة","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم","الالتزام بتعليمات تشغيل المنتجات"]},
+  {id:"gard",name:"قسم الجارد مانجيه",times:["1","3","5","7"],items:["التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة","ستارة الهواء مفعلة و كذلك الستارة البلاستيكية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","الميزان نظيف و معاير","المعدات المستخدمة بالقسم نظيفة و بحالة جيدة","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","تطهير الخضار يتم بطريقة صحيحة","الخامات الموجودة بالقسم لها بطاقات تعريفية و سارية الصلاحية","تخزين الخامات بشكل صحيح داخل القسم","نظافة القلايات والشبك بشكل مستمر","عدم وجود أى ملاحظات تخص جودة الخضار المستخدم","ثلاجة القسم نظيفة و سجل درجات حرارتها مفعل","الزيت مفلتر و صالح للتشغيل","فصل الخامات المطهية عن النيئة","الالتزام بقواعد دوران التخزين","الأهواد نظيفة ولا يتم وضع متعلقات شخصية بها","كميات التجهيز طبقا للمعدلات","الالتزام بريسيبي التشغيل","تقطيع المنتجات يتم بشكل مطابق","نظافة الصرف بشكل مستمر مع تغطيته","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"gizara",name:"قسم الجزارة",times:["1","3","5"],items:["التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة","ستارة الهواء مفعلة و كذلك الستارة البلاستيكية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني","النظافة الدورية للحوائط و الأرضيات بالقسم","الميزان نظيف و معاير","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة المنتجات","عدم وجود أى فرصة لحدوث تلوث عرضي","درجة حرارة المنتجات أثناء التجهيز مناسبة","عدم وجود أى منتجات مجهزة خارج التبريد","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"hamam",name:"قسم الحمام",times:["11","1","3"],items:["التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة","ستارة الهواء مفعلة و كذلك الستارة البلاستيكية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","الميزان نظيف و معاير","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة المنتجات","فصل الخامات المطهية عن النيئة","الالتزام بقواعد دوران التخزين","خطوات تشغيل الحمام طبقا لاستاندرد التشغيل","كميات التجهيز طبقا للمعدلات","درجة حرارة الحمام أثناء التجهيز مناسبة","عدم وجود أى منتجات مجهزة خارج التبريد لمدة طويلة","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"salq",name:"قسم السلق",times:["10","1","3","5","7"],items:["الفريش اير يعمل و فتحاته نظيفة بشكل مستمر","ستارة الهواء مفعلة و فتحاتها نظيفة","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","النظافة الدورية للمعدات و خلف المعدات","النظافة الدورية للادوات","الميزان نظيف و معاير","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","عدم اسالة منتجات داخل القسم","فصل الخامات المطهية عن النيئة","الالتزام بقواعد دوران التخزين","خطوات تشغيل المنتجات طبقا لاستاندرد التشغيل","كميات التجهيز طبقا للمعدلات","درجة حرارة المنتجات أثناء التجهيز مناسبة","عدم وجود أى منتجات في منطقة الخطر","عدم وجود اى مشكلة تخص تسوية أى منتج","الاهواد نظيفة بشكل مستمر مع عدم وضع منتجات فيها","عدم تشغيل أى منتجات خارج القسم","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"tawagin",name:"قسم الطواجن",times:["12","3","7","10"],items:["التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة","ستارة الهواء مفعلة و كذلك الستارة البلاستيكية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","الموازين نظيفة و معايرة","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","نظافة الطواجن و عدم وجود رايش بها","تبريد المنتجات يتم بصورة صحيحة و طبقًا للتعليمات","البان مارى يعمل و المياه بداخله نظيفة","المنتجات داخل البان مارى محققة لدرجة حرارة مناسبة","فصل الخامات المطهية عن النيئة","الالتزام بقواعد دوران التخزين","تشغيل الحمام و البط بطريقة جيدة (عدم وجود ريش)","كميات التجهيز طبقا للمعدلات","عدم وجود منتجات داخل منطقة الحرارة الخطرة","غرفة تبريد القسم نظيفة و محققة لدرجة تبريد مناسبة","سجل درجات حرارة الغرفة مفعل","التخزين في الغرفة يتم بشكل ملائم","جميع المنتجات في الغرفة لها كروت تعريفية و سارية الصلاحية","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"forn",name:"قسم الفرن",times:["1","5","9"],items:["التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","النظافة الدورية للحوائط و الأرضيات بالقسم","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة الخبز","كميات التجهيز طبقا للمعدلات","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","نظافة الهود و عدم وضع متعلقات شخصية داخلها","الطاولات نظيفة و لا يوجد ما يمنع تشغيلها","الردة لا يوجد بها ما يمنع تشغيلها","سلات نقل الخبز نظيفة ولا يوجد بها ما يمنع تشغيلها","عدم وضع أى منتجات أو خامات على الأرض مباشرةً","دراية العاملين بالطريقة الصحيحة لغسيل الايدي","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"mahashi",name:"قسم المحاشي",times:["10","12","2"],items:["التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة","ستارة الهواء مفعلة و كذلك الستارة البلاستيكية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة المنتجات","الثلاجة بالقسم نظيفة و تعمل و يتم قياس درجة حرارتها بشكل دوري","الالتزام بقواعد دوران التخزين","خطوات التشغيل طبقا لاستاندرد التشغيل","كميات التجهيز طبقا للمعدلات","عدم وجود أى منتجات مجهزة خارج التبريد لمدة طويلة","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]},
+  {id:"shurb",name:"قسم تعبئة الشرب والسلطات",times:["2","4","6","8","10"],items:["تشغيل المعدات قبل بدأ التشغيل بوقت كافي","ريشوه الطواجن يعمل على درجة حرارة 90 ومحقق درجة حرارة مناسبة","بانماريهات الشرب تعمل على درجة حرارة 90 و المياه بداخلها محققة درجة حرارة 70 فأكثر","الشرب بداخل البانماريهات محققة درجة حرارة 65 فأكثر","نظافة المعدات و الأدوات دوريًا أثناء التشغيل","النظافة الدورية للحوائط و الأرضيات بالقسم","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","الثلاجات بالقسم نظيفة ومحققة لدرجة تبريد مناسبة","جميع الكروت التعريفية صحيحة و صلاحيات المنتجات سارية","غرفة التبريد نظيفة بشكل دوري ومحققة لدرجة حرارة مناسبة","ترتيب الثلاجة يسمح بتطبيق قواعد دوران التخزين","سجل درجات حرارة الغرفة مفعل بشكل صحيح","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","عدم وجود أدوات أو معدات تحتاج الى صيانة داخل القسم","الموازين الموجودة بالقسم تعمل بشكل جيد و نظيفة دوريًا","الاضاءة بداخل القسم تعمل بشكل سليم","التكييف يعمل على درجة حرارة 20 و فتحات التكييف نظيفة"]},
+  {id:"matbakh",name:"قسم مطبخ التشغيل",times:["1","3","5","7"],items:["الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","الموازين نظيفة و معايرة","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","فصل الخامات المطهية عن النيئة","الالتزام بقواعد دوران التخزين","كميات التجهيزات متناسبة مع التشغيل بدون كميات أكبر من اللازم","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم","المعدات تعمل و نظيفة محققة لدرجة حرارة مناسبة","الاهواد تعمل و نظيفة مع عدم وضع متعلقات شخصية بداخلها","القلايات نظيفة و الزيت بداخلها مفلتر","TPM (صيانة المعدات)","وضع كميات مناسبة من الحمام في القلايات","الثلاجات بالقسم نظيفة و محققة لدرجة تبريد مناسبة","ترتيب الثلاجات مطابق بدون ملاحظات","المنتجات بداخل الثلاجات معرفة بكروت تعريفية و بصلاحيات سارية","كميات الرقاق في مطبخ التشغيل متناسبة مع المعدلات","ثلاجات القسم محققة لدرجة حرارة مناسبة","البيون مغطى المنتجات بمطبخ التشغيل","وزن المناب مناسب 420:450","الطواجن بالقسم نظيفة و لا يوجد بها رايش","عدم وجود منتجات في درجة حرارة الغرفة","منتجات العرض البارد محققة لدرجة حرارة أقل من 8","ستارة الهواء تعمل و فتحاتها نظيفة"]},
+  {id:"staff",name:"قسم مطبخ الموظفين",times:["1","3","5"],items:["ستارة الهواء مفعلة و كذلك الستارة البلاستيكية","الالتزام بأساسيات النظافة الشخصية للعاملين ( مع ذكر اسم المخالف)","حوض غسيل الايدي يعمل و نظيف و الصابون و المطهر متوفرين داخل الديسبنسرات","اتباع التكويد اللوني (في حالة استخدام بلانشات وسكاكين)","النظافة الدورية للحوائط و الأرضيات بالقسم","مصائد الحشرات الموجودة بالقسم تعمل مع عدم وجود اصابة حشرية","سلات القمامة تعمل بالقدم و نظيفة من الداخل و الخارج مع وجود أكياس مناسبة وغير ممتلئة","وجود مطهر PTS داخل القسم مع استعماله بشكل صحيح بعيدًا عن المنتجات الغذائية","الأهواد تعمل بشكل سليم مع الالتزام بالنظافة الدورية لها مع عدم وجود متعلقات شخصية بها","معدات حفظ درجات الحرارة (البان ماري) تعمل ومحققة لدرجة حرارة مناسبة","المنتجات بداخل البان ماري محققة لدرجة حرارة مناسبة","عدم وجود أى ملاحظات تخص صحة وسلامة المنتجات","عدم وجود أى ملاحظات تؤثر على جودة المنتجات","فصل الخامات المطهية عن النيئة","الالتزام بقواعد دوران التخزين","كميات التجهيز طبقا للمعدلات","عدم وجود أى منتجات مجهزة في درجة الحرارة الخطر لمدة طويلة","عدم وجود أي صيانات غير منجزة داخل القسم","عدم وجود أدوات تنظيف داخل القسم","عدم وجود أي متعلقات شخصية داخل القسم","الاضاءة بداخل القسم تعمل بشكل سليم"]}
+];
+
+let currentUser = null;
+let isAdmin = false;
+let myAssignedSections = [];
+let allRoundsData = {};
+let state = { sectionIdx:0, time:'', results:{}, notes:{} };
+
+function getToday() { return new Date().toISOString().split('T')[0]; }
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Login ──
+async function init() {
+  try {
+    const res = await fetch(API+'/api/team');
+    const members = await res.json();
+    const sel = document.getElementById('login-name');
+    members.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error(e); }
+}
+
+function doLogin() {
+  const name = document.getElementById('login-name').value;
+  if (!name) { alert('من فضلك اختر اسمك'); return; }
+  currentUser = name;
+  isAdmin = false;
+  loadUserHome();
+}
+
+function showAdminLogin() { showScreen('admin-login'); }
+
+async function doAdminLogin() {
+  const pw = document.getElementById('admin-password').value;
+  try {
+    const res = await fetch(API+'/api/admin/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    if (res.ok) {
+      currentUser = 'المدير'; isAdmin = true;
+      loadAdminPanel();
+    } else {
+      alert('كلمة السر غلط!');
+    }
+  } catch(e) { alert('خطأ في الاتصال'); }
+}
+
+function logoutUser() {
+  currentUser = null; isAdmin = false;
+  myAssignedSections = []; allRoundsData = {};
+  showScreen('login');
+}
+
+// ── User Home ──
+async function loadUserHome() {
+  document.getElementById('header-name').textContent = currentUser;
+  const today = getToday();
+  document.getElementById('admin-date').textContent = today;
+
+  try {
+    const [assignRes, roundsRes] = await Promise.all([
+      fetch(API+'/api/assignments'),
+      fetch(API+'/api/rounds?date='+today)
+    ]);
+    const assignments = await assignRes.json();
+    allRoundsData = await roundsRes.json();
+    myAssignedSections = assignments[currentUser] || [];
+  } catch(e) { myAssignedSections = []; allRoundsData = {}; }
+
+  renderUserHome();
+  showScreen('home');
+}
+
+function renderUserHome() {
+  let totalRounds=0, totalFails=0, sectionsWithData=0;
+  const mySections = myAssignedSections.length > 0
+    ? SECTIONS.filter(s => myAssignedSections.includes(s.id))
+    : SECTIONS;
+
+  mySections.forEach(s => {
+    const rounds = allRoundsData[s.id]||[];
+    if(rounds.length>0) sectionsWithData++;
+    totalRounds += rounds.length;
+    rounds.forEach(r => { totalFails += Object.values(r.results).filter(v=>v==='fail').length; });
+  });
+
+  document.getElementById('today-rounds').textContent = totalRounds;
+  document.getElementById('today-sections').textContent = sectionsWithData;
+  document.getElementById('today-fails').textContent = totalFails;
+
+  const list = document.getElementById('section-list');
+  list.innerHTML = mySections.map((s,i) => {
+    const rounds = allRoundsData[s.id]||[];
+    const doneTimes = rounds.map(r=>r.time);
+    const failCount = rounds.reduce((sum,r)=>sum+Object.values(r.results).filter(v=>v==='fail').length,0);
+    const globalIdx = SECTIONS.findIndex(sec=>sec.id===s.id);
+    const badges = s.times.map(t => {
+      const done = doneTimes.includes(t);
+      return `<span class="time-badge ${done?'time-badge-done':'time-badge-pending'}">${done?'✓':''} ${t}</span>`;
+    }).join('');
+    return `
+    <div class="card section-card" onclick="selectSection(${globalIdx})">
+      <div style="flex:1;">
+        <div class="section-name">${s.name}</div>
+        <div class="section-meta">${s.items.length} بند | ${rounds.length}/${s.times.length} مرور ${failCount>0?`<span class="badge-num">${failCount} مخالفة</span>`:''}</div>
+        <div class="section-badges">${badges}</div>
+      </div>
+      <span class="arrow">&#8592;</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Inspection ──
+function selectSection(idx) {
+  state.sectionIdx = idx; state.results={}; state.notes={};
+  const sec = SECTIONS[idx];
+  const rounds = allRoundsData[sec.id]||[];
+  const doneTimes = rounds.map(r=>r.time);
+  document.getElementById('time-section-name').textContent = sec.name;
+  const grid = document.getElementById('time-grid');
+  grid.innerHTML = sec.times.map(t => {
+    const done = doneTimes.includes(t);
+    return `<button class="time-btn ${done?'already-done':''}" onclick="selectTime('${t}',this)">الساعة ${t}</button>`;
+  }).join('');
+  state.time = '';
+  showScreen('time');
+}
+
+function selectTime(t, el) {
+  state.time = t;
+  document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const sec = SECTIONS[state.sectionIdx];
+  const existing = (allRoundsData[sec.id]||[]).find(r=>r.time===t);
+  if(existing) { state.results={...existing.results}; state.notes={...existing.notes}; }
+  else { state.results={}; state.notes={}; }
+}
+
+function startInspection() {
+  if(!state.time){alert('من فضلك اختر ساعة الفحص');return;}
+  const sec = SECTIONS[state.sectionIdx];
+  document.getElementById('inspect-title').textContent = sec.name;
+  document.getElementById('inspect-sub').textContent = 'الساعة '+state.time+' — '+currentUser;
+  renderItems(); showScreen('inspect');
+}
+
+function renderItems() {
+  const sec = SECTIONS[state.sectionIdx];
+  document.getElementById('items-list').innerHTML = sec.items.map((item,i) => {
+    const r = state.results[i];
+    return `
+    <div class="item-card ${r==='pass'?'done-pass':r==='fail'?'done-fail':''}" id="item-${i}">
+      <div class="item-num">البند ${i+1} من ${sec.items.length}</div>
+      <div class="item-text">${item}</div>
+      <div class="item-btns">
+        <button class="chk-btn ${r==='pass'?'pass':''}" onclick="setResult(${i},'pass',this)">✓ مطابق</button>
+        <button class="chk-btn ${r==='fail'?'fail':''}" onclick="setResult(${i},'fail',this)">✗ غير مطابق</button>
+      </div>
+      ${r==='fail'?`<input class="note-input" id="note-${i}" placeholder="أضف ملاحظات..." value="${(state.notes[i]||'').replace(/"/g,'&quot;')}" oninput="state.notes[${i}]=this.value" />`:''}
+    </div>`;
+  }).join('');
+  updateProgress();
+}
+
+function setResult(idx, val, el) {
+  state.results[idx] = val;
+  const card = document.getElementById('item-'+idx);
+  card.classList.remove('done-pass','done-fail');
+  card.classList.add(val==='pass'?'done-pass':'done-fail');
+  card.querySelectorAll('.chk-btn').forEach(b=>b.classList.remove('pass','fail'));
+  el.classList.add(val);
+  let noteEl = document.getElementById('note-'+idx);
+  if(val==='fail') {
+    if(!noteEl){
+      const inp=document.createElement('input');
+      inp.className='note-input';inp.id='note-'+idx;
+      inp.placeholder='أضف ملاحظات...';inp.value=state.notes[idx]||'';
+      inp.oninput=function(){state.notes[idx]=this.value;};
+      card.appendChild(inp);
+    }
+  } else { if(noteEl)noteEl.remove(); delete state.notes[idx]; }
+  updateProgress();
+}
+
+function updateProgress() {
+  const sec=SECTIONS[state.sectionIdx];
+  const total=sec.items.length, done=Object.keys(state.results).length;
+  const pct=total>0?Math.round(done/total*100):0;
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-txt').textContent=done+' / '+total+' بند';
+  document.getElementById('progress-pct').textContent=pct+'%';
+}
+
+function goToSummary() {
+  const sec=SECTIONS[state.sectionIdx];
+  const total=sec.items.length;
+  const passCount=Object.values(state.results).filter(v=>v==='pass').length;
+  const failCount=Object.values(state.results).filter(v=>v==='fail').length;
+  const pct=total>0?Math.round(failCount/total*100):0;
+  document.getElementById('stat-pass').textContent=passCount;
+  document.getElementById('stat-fail').textContent=failCount;
+  document.getElementById('stat-total').textContent=total;
+  document.getElementById('stat-pct').textContent=pct+'%';
+  document.getElementById('summary-sub').textContent=sec.name+' — الساعة '+state.time;
+  const failItems=[];
+  sec.items.forEach((item,i)=>{if(state.results[i]==='fail')failItems.push({num:i+1,item,note:state.notes[i]||''});});
+  const container=document.getElementById('fail-items-container');
+  container.innerHTML=failItems.length===0
+    ?'<div class="no-fail">لا توجد بنود غير مطابقة ✓</div>'
+    :failItems.map(f=>`<div class="fail-item"><span class="badge-num">${f.num}</span>${f.item}${f.note?`<div class="fail-note">ملاحظة: ${f.note}</div>`:''}</div>`).join('');
+  showScreen('summary');
+}
+
+async function saveRound() {
+  const sec=SECTIONS[state.sectionIdx];
+  try {
+    await fetch(API+'/api/rounds',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({section_id:sec.id,time:state.time,inspector:currentUser,results:state.results,notes:state.notes})
+    });
+    if(!allRoundsData[sec.id]) allRoundsData[sec.id]=[];
+    const existing=allRoundsData[sec.id].findIndex(r=>r.time===state.time);
+    const round={time:state.time,inspector:currentUser,results:{...state.results},notes:{...state.notes}};
+    if(existing>=0) allRoundsData[sec.id][existing]=round;
+    else allRoundsData[sec.id].push(round);
+    document.getElementById('success-title').textContent='تم الحفظ!';
+    document.getElementById('success-msg').textContent='تم حفظ مرور الساعة '+state.time+' لـ'+sec.name;
+    showScreen('success');
+  } catch(e){ alert('خطأ في الحفظ — تأكد من الاتصال بالإنترنت'); }
+}
+
+// ── Daily Report ──
+async function showDailyReport() {
+  const today = getToday();
+  document.getElementById('daily-report-date').textContent = today;
+  try {
+    const res = await fetch(API+'/api/rounds?date='+today);
+    allRoundsData = await res.json();
+  } catch(e){}
+  renderDailyReport();
+  showScreen('daily');
+}
+
+function showDailyReportAdmin() { showDailyReport(); }
+
+function renderDailyReport() {
+  let html='';
+  SECTIONS.forEach(sec=>{
+    const rounds=allRoundsData[sec.id]||[];
+    if(rounds.length===0) return;
+    const failCounts={};
+    rounds.forEach(r=>{
+      Object.entries(r.results).forEach(([idx,val])=>{
+        if(val==='fail') failCounts[idx]=(failCounts[idx]||0)+1;
+      });
+    });
+    const roundChips=rounds.map(r=>{
+      const fc=Object.values(r.results).filter(v=>v==='fail').length;
+      const cls=fc===0?'round-chip-pass':fc<3?'round-chip-mixed':'round-chip-fail';
+      const pct=Math.round(fc/sec.items.length*100);
+      return `<span class="round-chip ${cls}">س${r.time} (${r.inspector}): ${fc===0?'✓ مطابق':fc+' مخالفة '+pct+'%'}</span>`;
+    }).join('');
+    const failsHtml=Object.entries(failCounts).length===0
+      ?'<div style="font-size:12px;color:#16a34a;padding:4px 0;">✓ لا توجد مخالفات</div>'
+      :Object.entries(failCounts).sort((a,b)=>b[1]-a[1]).map(([idx,cnt])=>`
+        <div class="repeat-fail">
+          <span class="repeat-fail-count">${cnt}x</span>${sec.items[parseInt(idx)]||''}
+        </div>`).join('');
+    html+=`
+    <div class="day-section-card">
+      <div class="day-section-name">${sec.name}</div>
+      <div class="rounds-row">${roundChips}</div>
+      <div>${failsHtml}</div>
+    </div>`;
+  });
+  if(!html) html='<div style="text-align:center;padding:40px 0;color:#888;">لا توجد بيانات لهذا اليوم</div>';
+  document.getElementById('daily-report-content').innerHTML=html;
+}
+
+// ── PDF ──
+function generatePDF() {
+  const today = getToday();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210, ML=15, MR=15, MT=15, CW=PW-ML-MR;
+  let y=MT;
+  const DARK=[26,26,46],GREEN=[22,163,74],RED=[220,38,38],GRAY=[100,116,139];
+  const LGRAY=[248,250,252],MGRAY=[226,232,240],LGREEN=[220,252,231],LRED=[254,226,226],WHITE=[255,255,255];
+
+  function rT(t){ return String(t).split(' ').reverse().join(' '); }
+  function sf(b=false){ doc.setFont('helvetica',b?'bold':'normal'); }
+
+  // هيدر
+  doc.setFillColor(...DARK); doc.rect(ML,y,CW,16,'F');
+  sf(true); doc.setFontSize(13); doc.setTextColor(...WHITE);
+  doc.text(rT('تقرير فحص الجودة اليومي'), PW-MR, y+7, {align:'right'});
+  sf(false); doc.setFontSize(8); doc.setTextColor(180,180,210);
+  doc.text(rT('إدارة الجودة'), PW/2, y+7, {align:'center'});
+  doc.setTextColor(200,200,220); doc.text(today, ML+3, y+7);
+  doc.setFontSize(7); doc.setTextColor(150,160,200);
+  doc.text(rT('مسؤول الجودة: '+currentUser), PW-MR, y+13, {align:'right'});
+  y+=20;
+
+  // إحصائيات
+  let totalRounds=0, totalFails=0, sectionsCount=0;
+  SECTIONS.forEach(s=>{ const r=allRoundsData[s.id]||[]; if(r.length>0){sectionsCount++;totalRounds+=r.length;r.forEach(rd=>{totalFails+=Object.values(rd.results).filter(v=>v==='fail').length;});} });
+  const statW=CW/3;
+  [[String(totalFails),rT('إجمالي المخالفات'),RED],[String(totalRounds),rT('إجمالي المرورات'),[26,120,194]],[String(sectionsCount),rT('أقسام تم فحصها'),GREEN]].forEach((s,i)=>{
+    const sx=ML+i*statW;
+    doc.setFillColor(...LGRAY); doc.rect(sx,y,statW-1,14,'F');
+    doc.setDrawColor(...MGRAY); doc.rect(sx,y,statW-1,14,'S');
+    sf(true); doc.setFontSize(16); doc.setTextColor(...s[2]); doc.text(s[0],sx+statW/2,y+7,{align:'center'});
+    sf(false); doc.setFontSize(7); doc.setTextColor(...GRAY); doc.text(s[1],sx+statW/2,y+12,{align:'center'});
+  });
+  y+=18;
+
+  // أقسام
+  SECTIONS.forEach(sec=>{
+    const rounds=allRoundsData[sec.id]||[];
+    if(rounds.length===0) return;
+    if(y>260){doc.addPage();y=MT;}
+    const sf2=rounds.reduce((s,r)=>s+Object.values(r.results).filter(v=>v==='fail').length,0);
+
+    // عنوان القسم
+    doc.setFillColor(...DARK); doc.rect(ML,y,CW,9,'F');
+    sf(true); doc.setFontSize(9); doc.setTextColor(...WHITE);
+    doc.text(rT(sec.name), PW-MR-2, y+6, {align:'right'});
+    doc.setTextColor(150,200,255); doc.setFontSize(7.5);
+    doc.text(rT(rounds.length+' مرورات'), PW/2, y+6, {align:'center'});
+    doc.setTextColor(255,150,150);
+    doc.text(rT(sf2+' مخالفة'), ML+18, y+6, {align:'center'});
+    y+=11;
+
+    // هيدر الجدول
+    const cols=[{l:rT('نسبة عدم المطابقة'),w:36},{l:rT('غير مطابق'),w:24},{l:rT('مطابق'),w:20},{l:rT('المسؤول'),w:40},{l:rT('الساعة'),w:22},{l:'م',w:10}];
+    doc.setFillColor(...MGRAY); doc.rect(ML,y,CW,6,'F');
+    sf(true); doc.setFontSize(7); doc.setTextColor(30,30,30);
+    let xp=ML; cols.forEach(c=>{doc.text(c.l,xp+c.w/2,y+4,{align:'center'});xp+=c.w;}); y+=6;
+
+    rounds.forEach((r,ri)=>{
+      if(y>270){doc.addPage();y=MT;}
+      const fc=Object.values(r.results).filter(v=>v==='fail').length;
+      const pc=Object.values(r.results).filter(v=>v==='pass').length;
+      const pct=sec.items.length>0?Math.round(fc/sec.items.length*100):0;
+      xp=ML;
+      doc.setFillColor(...(ri%2===0?WHITE:LGRAY)); doc.rect(ML,y,CW,6,'F');
+      doc.setDrawColor(...MGRAY); doc.rect(ML,y,CW,6,'S');
+      sf(true); doc.setFontSize(7.5);
+      // نسبة
+      doc.setFillColor(...(pct>0?LRED:LGREEN)); doc.rect(xp,y,cols[0].w,6,'F');
+      doc.setTextColor(...(pct>0?RED:GREEN)); doc.text(pct+'%',xp+cols[0].w/2,y+4,{align:'center'}); xp+=cols[0].w;
+      // غير مطابق
+      doc.setFillColor(...(fc>0?LRED:LGREEN)); doc.rect(xp,y,cols[1].w,6,'F');
+      doc.setTextColor(...(fc>0?RED:GREEN)); doc.text(String(fc),xp+cols[1].w/2,y+4,{align:'center'}); xp+=cols[1].w;
+      // مطابق
+      doc.setFillColor(...(ri%2===0?WHITE:LGRAY)); doc.rect(xp,y,cols[2].w,6,'F');
+      doc.setTextColor(...GREEN); doc.text(String(pc),xp+cols[2].w/2,y+4,{align:'center'}); xp+=cols[2].w;
+      // المسؤول
+      sf(false); doc.setFillColor(...(ri%2===0?WHITE:LGRAY)); doc.rect(xp,y,cols[3].w,6,'F');
+      doc.setTextColor(30,30,30); doc.text(rT(r.inspector),xp+cols[3].w-2,y+4,{align:'right'}); xp+=cols[3].w;
+      // الساعة
+      sf(true); doc.text(rT('س'+r.time),xp+cols[4].w/2,y+4,{align:'center'}); xp+=cols[4].w;
+      // م
+      sf(false); doc.text(String(ri+1),xp+cols[5].w/2,y+4,{align:'center'}); y+=6;
+
+      // المخالفات
+      Object.entries(r.results).filter(([,v])=>v==='fail').forEach(([idx])=>{
+        if(y>270){doc.addPage();y=MT;}
+        doc.setFillColor(255,245,245); doc.rect(ML,y,CW,5.5,'F');
+        doc.setDrawColor(252,165,165); doc.rect(ML,y,CW,5.5,'S');
+        doc.setFontSize(6.5); sf(true); doc.setTextColor(...RED);
+        doc.text('['+( parseInt(idx)+1)+']',ML+2,y+3.5);
+        sf(false); doc.setTextColor(50,50,50);
+        let txt=rT(sec.items[parseInt(idx)]||'');
+        if(txt.length>65) txt=txt.substring(0,62)+'...';
+        doc.text(txt,PW-MR-2,y+3.5,{align:'right'});
+        if(r.notes&&r.notes[idx]){doc.setTextColor(...GRAY);doc.text(rT(r.notes[idx]),ML+10,y+3.5);}
+        y+=5.5;
+      });
+    });
+    y+=4;
+  });
+
+  // فوتر
+  doc.setDrawColor(...MGRAY); doc.line(ML,y,PW-MR,y); y+=4;
+  sf(false); doc.setFontSize(7); doc.setTextColor(...GRAY);
+  doc.text(rT('التاريخ: '+today+' | المرورات: '+totalRounds+' | المخالفات: '+totalFails), PW-MR, y, {align:'right'});
+  doc.text(rT('توقيع مسؤول الجودة: _______________'), ML, y);
+
+  const filename='تقرير_الجودة_'+today+'.pdf';
+  doc.save(filename);
+  setTimeout(()=>{
+    const subj=encodeURIComponent('تقرير الجودة اليومي - '+today);
+    const body=encodeURIComponent('مرفق تقرير الجودة اليومي\nالتاريخ: '+today+'\nإجمالي المرورات: '+totalRounds+'\nإجمالي المخالفات: '+totalFails);
+    window.location.href='mailto:Mohamedshrif099@gmail.com?subject='+subj+'&body='+body;
+  },1000);
+}
+
+// ── Admin Panel ──
+async function loadAdminPanel() {
+  document.getElementById('admin-date').textContent = getToday();
+  try {
+    const [teamRes, assignRes] = await Promise.all([
+      fetch(API+'/api/team'),
+      fetch(API+'/api/assignments')
+    ]);
+    const team = await teamRes.json();
+    const currentAssignments = await assignRes.json();
+    renderAssignPanel(team, currentAssignments);
+  } catch(e){ alert('خطأ في تحميل البيانات'); }
+  showScreen('admin');
+}
+
+function renderAssignPanel(team, currentAssignments) {
+  const list = document.getElementById('assign-list');
+  list.innerHTML = team.map(member => {
+    const memberSections = currentAssignments[member]||[];
+    const checkboxes = SECTIONS.map(sec => `
+      <label class="sec-check">
+        <input type="checkbox" value="${sec.id}" ${memberSections.includes(sec.id)?'checked':''}
+          onchange="updateAssign('${member}','${sec.id}',this.checked)">
+        ${sec.name}
+      </label>`).join('');
+    return `
+    <div class="assign-member">
+      <div class="member-name">👤 ${member}</div>
+      <div class="section-checkboxes">${checkboxes}</div>
+    </div>`;
+  }).join('');
+}
+
+let pendingAssignments = {};
+function updateAssign(member, sectionId, checked) {
+  if(!pendingAssignments[member]) pendingAssignments[member]=[];
+  if(checked) { if(!pendingAssignments[member].includes(sectionId)) pendingAssignments[member].push(sectionId); }
+  else { pendingAssignments[member]=pendingAssignments[member].filter(s=>s!==sectionId); }
+}
+
+async function saveAssignments() {
+  // اجمع كل الـ checkboxes
+  const assignments = {};
+  document.querySelectorAll('.assign-member').forEach(memberDiv => {
+    const name = memberDiv.querySelector('.member-name').textContent.replace('👤 ','').trim();
+    const checked = [...memberDiv.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value);
+    if(checked.length>0) assignments[name]=checked;
+  });
+  try {
+    const res = await fetch(API+'/api/assignments',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:'quality2025',assignments})
+    });
+    if(res.ok){ alert('تم حفظ التوزيع بنجاح ✅'); }
+    else { alert('خطأ في الحفظ'); }
+  } catch(e){ alert('خطأ في الاتصال'); }
+}
+
+init();
+</script>
+</body>
+</html>
